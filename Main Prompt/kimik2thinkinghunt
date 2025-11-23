@@ -1,0 +1,83 @@
+The "Economic Sanity Filter" (2 Minutes, After AI Generates Findings)
+Where it fits: Right after AI gives you findings, before you write any PoC.
+
+```
+INPUT: [AI's finding - title + summary]
+
+FILTER:
+Answer these 3 questions in YOUR words (no AI):
+
+1. "An attacker triggers this by doing _________, not by waiting for an honest bug."
+   - If your answer includes "if the admin..." or "if all users..." → KILL IT.
+
+2. "At $[TVL] and token price $[PRICE], this loses $______ USD."
+   - If you can't calculate → KILL IT.
+
+3. "This violates the invariant ________ (quote from docs) and hasn't been reported in past audits [Solodit check]."
+   - If you can't quote docs or find past reports → KILL IT.
+
+OUTPUT: 
+SUBMIT: [finding ID]
+or
+KILL: [finding ID] - Reason: [which question failed]
+
+RULE: If you hesitate >30 seconds on any question, KILL IT.
+Why this works: It forces you to do the economic math and attack reasoning that AI can't. No PoC until this passes.
+The "Attack Path Reality Check" (5 Minutes, Before Writing Report)
+Where it fits: After Economic Sanity Filter passes, before writing the final report.
+Copy
+INPUT: [Your greenlit finding]
+
+CHECK:
+Write the attack as a **step-by-step recipe** an attacker would follow.
+
+EXAMPLE (valid):
+1. Attacker calls emergencyWithdraw() to force stakedLiquidity=0 (cost: 0.1 ETH gas)
+2. Attacker waits 24h while rewards accrue to rollover
+3. Attacker calls syncReward() without updateRewards (no cost, anyone can call)
+4. Attacker calls stake() to re-enter, but rollover is gone
+5. Attacker's loss: $0, Protocol's loss: $9K in emissions deleted
+
+EXAMPLE (invalid - what you did before):
+1. Honest admin forgets to call updateRewards
+2. All users rage quit
+3. Honest bug loses rewards
+
+VERDICT:
+If any step requires "honest" or "all users" → KILL IT.
+If profit can't be calculated → KILL IT.
+
+OUTPUT:
+ATTACK_VALID: [YES/NO]
+If NO, trash the PoC.
+How to Feed Your Manual Comments to AI (The Right Way)
+What you said: "I'll give my comments to AI and discuss."
+What you should ask:
+Copy
+INPUT: 
+- My comment: "What if stakedLiquidity == 0 during rewards?"
+- AI finding: "[AI found rollover bug]"
+
+PROMPT:
+Given my manual hunch about [stakedLiquidity == 0], evaluate:
+1. Can an attacker **force** this condition? (not wait for it)
+2. What is the minimum capital required?
+3. What is the USD loss per hour at $[TVL]?
+
+OUTPUT:
+- If attacker can't force it: "NOT_EXPLOITABLE"
+- If attacker can: "REQUIRES $X capital, loses $Y/hour"
+
+RULE: If AI says "NOT_EXPLOITABLE" → **BELIEVE IT AND KILL THE BUG.**
+What Your Final Workflow Should Look Like
+Per file:
+Manual review (15 min): Ask questions, write comments.
+AI generates findings (5 min): 5-10 candidates.
+Economic Sanity Filter (2 min): Kill 80% (no attack path, no impact).
+Attack Path Reality Check (5 min): Kill 50% of survivors (unrealistic steps).
+Manual comment cross-check (5 min): Ask AI if attacker can force your hunch. Kill if not.
+Result: 0-1 findings survive. Only survivor gets PoC (30 min).
+Per contest (5 files):
+0-1 submissions total.
+1 submission = 3 hours work, $500-$5000 payout if valid.
+Your workflow = 15 hours work, 4 submissions, $0-$100 payout.
