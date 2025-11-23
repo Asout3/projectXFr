@@ -9,6 +9,7 @@ interface LoginPageProps {
 export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [redirectingMessage, setRedirectingMessage] = useState(false);
 
   const handleGoogleLogin = async () => {
     setIsLoading(true);
@@ -21,14 +22,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
       if (result === null) {
         // Redirecting — show a message so user knows something is happening
         console.log('[LoginPage] Redirect initiated. Waiting for OAuth callback...');
+        setRedirectingMessage(true);
         setError(null); // Clear any previous error
+        // Keep loading state active while redirecting
         return;
       }
       console.log('[LoginPage] Popup sign-in successful.');
     } catch (err: any) {
       console.error('[LoginPage] Login Error:', err);
       setError(err?.message || 'Failed to sign in. Please try again.');
-    } finally {
       setIsLoading(false);
     }
   };
@@ -59,6 +61,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
             <div className="mb-6 p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-200 text-sm rounded-lg text-left flex items-start gap-2 animate-fade-in-up">
               <Icons.X size={16} className="mt-0.5 shrink-0" />
               <span>{error}</span>
+            </div>
+          )}
+
+          {redirectingMessage && (
+            <div className="mb-6 p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-200 text-sm rounded-lg text-left flex items-start gap-2 animate-fade-in-up">
+              <Icons.Loader2 size={16} className="mt-0.5 shrink-0 animate-spin" />
+              <span>Redirecting to Google Sign-In...</span>
             </div>
           )}
 

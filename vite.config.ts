@@ -8,6 +8,7 @@ export default defineConfig(({ mode }) => {
       server: {
         port: 3000,
         host: '0.0.0.0',
+        middlewareMode: false,
       },
       plugins: [react()],
       define: {
@@ -23,6 +24,7 @@ export default defineConfig(({ mode }) => {
       preview: {
         host: '0.0.0.0',
         port: 3000,
-      }
+      },
+      appType: 'spa',
     };
 });
