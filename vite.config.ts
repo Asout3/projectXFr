@@ -18,6 +18,11 @@ export default defineConfig(({ mode }) => {
         alias: {
           '@': path.resolve(__dirname, '.'),
         }
+      },
+      // BrowserRouter requires serving index.html for all routes
+      preview: {
+        host: '0.0.0.0',
+        port: 3000,
       }
     };
 });

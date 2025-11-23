@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 import { Navbar } from './components/Navbar';
 import { LandingPage } from './pages/LandingPage';
@@ -8,43 +8,62 @@ import { GeneratorPage } from './pages/GeneratorPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { User } from './types';
 import { Icons } from './components/Icons';
+import { auth, onAuthStateChanged, signOut as firebaseSignOut, handleRedirectResult } from './services/firebase';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for "logged in" user in localStorage to persist session across refreshes
-    const storedUser = localStorage.getItem('mock_user');
-    if (storedUser) {
+    // Process possible redirect result first, then subscribe to auth state.
+    // For iOS redirect flows, we need to ensure handleRedirectResult completes
+    // and auth state is properly synced before rendering.
+    let unsub: (() => void) | null = null;
+
+    (async () => {
       try {
-        setUser(JSON.parse(storedUser));
+        console.log('[Auth] Checking for redirect result...');
+        await handleRedirectResult();
+        console.log('[Auth] Redirect result check complete.');
       } catch (e) {
-        console.error("Failed to parse user", e);
+        console.warn('[Auth] handleRedirectResult error:', e);
       }
-    }
-    // Simulate a brief initial load for smoother UX
-    setTimeout(() => {
-      setLoading(false);
-    }, 800);
+
+      console.log('[Auth] Subscribing to onAuthStateChanged...');
+      unsub = onAuthStateChanged(auth, (firebaseUser) => {
+        console.log('[Auth] onAuthStateChanged fired:', firebaseUser ? `User: ${firebaseUser.uid}` : 'No user');
+
+        if (firebaseUser) {
+          const mapped: User = {
+            uid: firebaseUser.uid,
+            displayName: firebaseUser.displayName,
+            email: firebaseUser.email,
+            photoURL: firebaseUser.photoURL,
+          };
+          console.log('[Auth] User set:', mapped.uid);
+          setUser(mapped);
+        } else {
+          console.log('[Auth] User cleared.');
+          setUser(null);
+        }
+        console.log('[Auth] Loading complete.');
+        setLoading(false);
+      });
+    })();
+
+    return () => {
+      if (unsub) unsub();
+    };
   }, []);
 
+  // Login handled via Firebase sign-in flow from the login page.
   const handleLogin = () => {
-    // Simulate a successful Google Login
-    const mockUser: User = {
-      uid: "demo-user-" + Math.random().toString(36).substr(2, 9),
-      displayName: "Demo User",
-      email: "user@example.com",
-      photoURL: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&h=100"
-    };
-    
-    setUser(mockUser);
-    localStorage.setItem('mock_user', JSON.stringify(mockUser));
+    // no-op kept for compatibility with existing LoginPage prop signature
   };
 
   const handleLogout = () => {
-    setUser(null);
-    localStorage.removeItem('mock_user');
+    // Sign out from Firebase
+    firebaseSignOut().catch((err) => console.error('Sign out failed', err));
   };
 
   //

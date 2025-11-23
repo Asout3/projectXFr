@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Icons } from '../components/Icons';
+import { signInWithGoogle } from '../services/firebase';
 
 interface LoginPageProps {
   onLogin: () => void;
@@ -12,18 +13,24 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     setError(null);
-
-    // Simulate network delay for realistic feel
-    setTimeout(() => {
-      try {
-        onLogin();
-        // Navigation handled by App component redirect
-      } catch (err) {
-        console.error("Login Error:", err);
-        setError("Failed to sign in. Please try again.");
-        setIsLoading(false);
+    try {
+      console.log('[LoginPage] Starting sign-in...');
+      const result = await signInWithGoogle();
+      // If signInWithGoogle returned null, a redirect was initiated.
+      // If popup succeeded, onAuthStateChanged in App will pick up the user.
+      if (result === null) {
+        // Redirecting — show a message so user knows something is happening
+        console.log('[LoginPage] Redirect initiated. Waiting for OAuth callback...');
+        setError(null); // Clear any previous error
+        return;
       }
-    }, 1500);
+      console.log('[LoginPage] Popup sign-in successful.');
+    } catch (err: any) {
+      console.error('[LoginPage] Login Error:', err);
+      setError(err?.message || 'Failed to sign in. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
