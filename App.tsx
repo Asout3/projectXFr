@@ -8,52 +8,37 @@ import { GeneratorPage } from './pages/GeneratorPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { User } from './types';
 import { Icons } from './components/Icons';
-import { auth, onAuthStateChanged, signOut as firebaseSignOut, handleRedirectResult } from './services/firebase';
+import { auth, onAuthStateChanged, signOut as firebaseSignOut } from './services/firebase';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Process possible redirect result first, then subscribe to auth state.
-    // For iOS redirect flows, we need to ensure handleRedirectResult completes
-    // and auth state is properly synced before rendering.
-    let unsub: (() => void) | null = null;
+    // onAuthStateChanged handles the user's sign-in state, including the result
+    // of a redirect operation. It's the recommended way to get the current user.
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      console.log('[Auth] onAuthStateChanged fired:', firebaseUser ? `User: ${firebaseUser.uid}` : 'No user');
 
-    (async () => {
-      try {
-        console.log('[Auth] Checking for redirect result...');
-        await handleRedirectResult();
-        console.log('[Auth] Redirect result check complete.');
-      } catch (e) {
-        console.warn('[Auth] handleRedirectResult error:', e);
+      if (firebaseUser) {
+        const mapped: User = {
+          uid: firebaseUser.uid,
+          displayName: firebaseUser.displayName,
+          email: firebaseUser.email,
+          photoURL: firebaseUser.photoURL,
+        };
+        console.log('[Auth] User set:', mapped.uid);
+        setUser(mapped);
+      } else {
+        console.log('[Auth] User cleared.');
+        setUser(null);
       }
+      console.log('[Auth] Loading complete.');
+      setLoading(false);
+    });
 
-      console.log('[Auth] Subscribing to onAuthStateChanged...');
-      unsub = onAuthStateChanged(auth, (firebaseUser) => {
-        console.log('[Auth] onAuthStateChanged fired:', firebaseUser ? `User: ${firebaseUser.uid}` : 'No user');
-
-        if (firebaseUser) {
-          const mapped: User = {
-            uid: firebaseUser.uid,
-            displayName: firebaseUser.displayName,
-            email: firebaseUser.email,
-            photoURL: firebaseUser.photoURL,
-          };
-          console.log('[Auth] User set:', mapped.uid);
-          setUser(mapped);
-        } else {
-          console.log('[Auth] User cleared.');
-          setUser(null);
-        }
-        console.log('[Auth] Loading complete.');
-        setLoading(false);
-      });
-    })();
-
-    return () => {
-      if (unsub) unsub();
-    };
+    // The returned function will be called on component unmount
+    return () => unsubscribe();
   }, []);
 
   // Login handled via Firebase sign-in flow from the login page.
