@@ -51,17 +51,7 @@ if (typeof window !== 'undefined' && import.meta.env.VITE_FIREBASE_MEASUREMENT_I
 // fall back to redirect sign-in which works more reliably on iOS/Safari.
 export async function signInWithGoogle() {
 	try {
-		// Check if this is iOS/Safari which often blocks popups
-		const isIOSSafari = /iPad|iPhone|iPod/.test(navigator.userAgent) && 
-			/Safari/.test(navigator.userAgent) && 
-			!/Chrome/.test(navigator.userAgent);
-		
-		if (isIOSSafari) {
-			console.warn('[Firebase] iOS Safari detected, using redirect flow for better compatibility');
-			await signInWithRedirect(auth, googleProvider);
-			return null;
-		}
-		
+		// Prioritize popup-based sign-in for a better UX.
 		const result = await signInWithPopup(auth, googleProvider);
 		return result;
 	} catch (err: any) {
